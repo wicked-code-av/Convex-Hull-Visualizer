@@ -1,5 +1,8 @@
 package av.code.wicked;
 
+import java.security.SecureRandom;
+import java.util.Random;
+
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -7,6 +10,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.geometry.Point2D;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.control.Tooltip;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.Pane;
@@ -16,8 +20,17 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 
 public class UIController {
+    private static final int RANDOM_POINT_COUNT = 25;
+    private static final double POINT_RADIUS = 4.0;
+
     private final Stage stage;
     private final ObservableList<Point2D> points = FXCollections.observableArrayList();
+    private final Random random = new SecureRandom();
+
+    @FXML private Pane pointCanvas;
+    @FXML private Button clearButton;
+    @FXML private Button randomPointsButton;
+    @FXML private Button computeButton;
 
     public UIController(Stage stage) {
         this.stage = stage;
@@ -38,24 +51,53 @@ public class UIController {
     }
 
 
-    @FXML
-    private Pane pointCanvas;
 
     @FXML
     private void initialize() {
         if (pointCanvas != null) {
             pointCanvas.setOnMouseClicked(event -> {
                 if (event.getButton() == MouseButton.PRIMARY) {
-                    Point2D point = new Point2D(event.getX(), event.getY());
-                    points.add(point);
-                    drawPoint(point);
+                    addPoint(event.getX(), event.getY());
                 }
             });
+        }
+        if (clearButton != null) {
+            clearButton.setOnAction(event -> handleClearPoints());
+        }
+        if (randomPointsButton != null) {
+            randomPointsButton.setOnAction(event -> handleAddRandomPoints());
+        }
+    }
+
+    private void addPoint(double x, double y) {
+        Point2D point = new Point2D(x, y);
+        points.add(point);
+        drawPoint(point);
+    }
+
+    @FXML
+    private void handleClearPoints() {
+        points.clear();
+        pointCanvas.getChildren().clear();
+    }
+
+    @FXML
+    private void handleAddRandomPoints() {
+        double width = pointCanvas.getWidth();
+        double height = pointCanvas.getHeight();
+        if (width <= 0 || height <= 0) {
+            width = pointCanvas.getScene().getWidth();
+            height = pointCanvas.getScene().getHeight();
+        }
+        for (int i = 0; i < RANDOM_POINT_COUNT; i++) {
+            double x = POINT_RADIUS + random.nextDouble() * Math.max(width - 2 * POINT_RADIUS, 0);
+            double y = POINT_RADIUS + random.nextDouble() * Math.max(height - 2 * POINT_RADIUS, 0);
+            addPoint(x, y);
         }
     }
 
     private void drawPoint(Point2D point) {
-        Circle circle = new Circle(point.getX(), point.getY(), 4, Color.DODGERBLUE);
+        Circle circle = new Circle(point.getX(), point.getY(), POINT_RADIUS, Color.DODGERBLUE);
         circle.setStroke(Color.WHITE);
         circle.setStrokeWidth(1.5);
         Tooltip tooltip = new Tooltip(formatPoint(point));
