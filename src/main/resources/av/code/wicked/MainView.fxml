@@ -15,11 +15,16 @@
     </center>
     <bottom>
         <ToolBar>
-            <HBox spacing="10" alignment="CENTER">
-                <Button fx:id="clearButton" text="Clear Canvas"/>
-                <Button fx:id="randomPointsButton" text="Add Random Points"/>
-                <Button fx:id="computeButton" text="Compute Convex Hull" />
-            </HBox>
+            <Button fx:id="clearButton" text="Clear Canvas" />
+            <Button fx:id="randomPointsButton" text="Add Random Points" />
+            <Button fx:id="computeButton" text="Prepare Hull" />
+            <Separator orientation="VERTICAL" />
+            <Button fx:id="playPauseButton" text="Play" disable="true" />
+            <Button fx:id="stepButton" text="Step" disable="true" />
+            <Button fx:id="resetButton" text="Reset" disable="true" />
+            <Separator orientation="VERTICAL" />
+            <Pane HBox.hgrow="ALWAYS" />
+            <Label fx:id="statusLabel" text="Ready." />
         </ToolBar>
     </bottom>
 </BorderPane>
