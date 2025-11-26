@@ -1,7 +1,6 @@
 package av.code.wicked;
 
-import java.security.SecureRandom;
-import java.util.Random;
+import java.util.List;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -25,7 +24,7 @@ public class UIController {
 
     private final Stage stage;
     private final ObservableList<Point2D> points = FXCollections.observableArrayList();
-    private final Random random = new SecureRandom();
+    private final RandomPointGenerator pointGenerator = new RandomPointGenerator();
 
     @FXML private Pane pointCanvas;
     @FXML private Button clearButton;
@@ -36,37 +35,57 @@ public class UIController {
         this.stage = stage;
     }
 
-    public void init() {
+    public void launchUI() {
         try {
-            FXMLLoader loader = new FXMLLoader(App.class.getResource("MainView.fxml"));
-            loader.setController(this);
-            Parent root = loader.load();
-            Scene scene = new Scene(root, 800, 600);
-            stage.setTitle("Convex Hull");
-            stage.setScene(scene);
-            stage.show();
+            Parent root = loadView();
+            Scene scene = buildScene(root);
+            showStage(scene);
         } catch (Exception ex) {
             throw new IllegalStateException("Unable to initialize UI", ex);
         }
     }
 
+    private Parent loadView() throws java.io.IOException {
+        FXMLLoader loader = new FXMLLoader(App.class.getResource("MainView.fxml"));
+        loader.setController(this);
+        return loader.load();
+    }
 
+    private Scene buildScene(Parent root) {
+        return new Scene(root, 800, 600);
+    }
+
+    private void showStage(Scene scene) {
+        stage.setTitle("Convex Hull");
+        stage.setScene(scene);
+        stage.show();
+    }
 
     @FXML
     private void initialize() {
-        if (pointCanvas != null) {
-            pointCanvas.setOnMouseClicked(event -> {
-                if (event.getButton() == MouseButton.PRIMARY) {
-                    addPoint(event.getX(), event.getY());
-                }
-            });
+        configureCanvasInteraction();
+        configureButtons();
+    }
+
+    private void configureCanvasInteraction() {
+        if (pointCanvas == null) {
+            return;
         }
+        pointCanvas.setOnMouseClicked(event -> {
+            if (event.getButton() == MouseButton.PRIMARY) {
+                addPoint(event.getX(), event.getY());
+            }
+        });
+    }
+
+    private void configureButtons() {
         if (clearButton != null) {
-            clearButton.setOnAction(event -> handleClearPoints());
+            clearButton.setOnAction(event -> clearAllPoints());
         }
         if (randomPointsButton != null) {
-            randomPointsButton.setOnAction(event -> handleAddRandomPoints());
+            randomPointsButton.setOnAction(event -> populateWithRandomPoints());
         }
+        // computeButton reserved for future hull computation wiring.
     }
 
     private void addPoint(double x, double y) {
@@ -75,35 +94,46 @@ public class UIController {
         drawPoint(point);
     }
 
-    @FXML
-    private void handleClearPoints() {
+    private void addPoints(List<Point2D> newPoints) {
+        newPoints.forEach(point -> {
+            points.add(point);
+            drawPoint(point);
+        });
+    }
+
+    private void clearAllPoints() {
         points.clear();
         pointCanvas.getChildren().clear();
     }
 
-    @FXML
-    private void handleAddRandomPoints() {
-        double width = pointCanvas.getWidth();
-        double height = pointCanvas.getHeight();
-        if (width <= 0 || height <= 0) {
-            width = pointCanvas.getScene().getWidth();
-            height = pointCanvas.getScene().getHeight();
-        }
-        for (int i = 0; i < RANDOM_POINT_COUNT; i++) {
-            double x = POINT_RADIUS + random.nextDouble() * Math.max(width - 2 * POINT_RADIUS, 0);
-            double y = POINT_RADIUS + random.nextDouble() * Math.max(height - 2 * POINT_RADIUS, 0);
-            addPoint(x, y);
-        }
+    private void populateWithRandomPoints() {
+        double width = resolveCanvasDimension(pointCanvas.getWidth(), pointCanvas.getScene() != null ? pointCanvas.getScene().getWidth() : 0);
+        double height = resolveCanvasDimension(pointCanvas.getHeight(), pointCanvas.getScene() != null ? pointCanvas.getScene().getHeight() : 0);
+        List<Point2D> generated = pointGenerator.generatePoints(RANDOM_POINT_COUNT, width, height, POINT_RADIUS);
+        addPoints(generated);
+    }
+
+    private double resolveCanvasDimension(double paneExtent, double fallbackExtent) {
+        return paneExtent > 0 ? paneExtent : fallbackExtent;
     }
 
     private void drawPoint(Point2D point) {
         Circle circle = new Circle(point.getX(), point.getY(), POINT_RADIUS, Color.DODGERBLUE);
         circle.setStroke(Color.WHITE);
         circle.setStrokeWidth(1.5);
+        attachTooltip(circle, point);
+        enableRemoval(circle, point);
+        pointCanvas.getChildren().add(circle);
+    }
+
+    private void attachTooltip(Circle circle, Point2D point) {
         Tooltip tooltip = new Tooltip(formatPoint(point));
         tooltip.setShowDelay(Duration.ZERO);
         tooltip.setHideDelay(Duration.millis(100));
         Tooltip.install(circle, tooltip);
+    }
+
+    private void enableRemoval(Circle circle, Point2D point) {
         circle.setOnMouseClicked(event -> {
             if (event.getButton() == MouseButton.SECONDARY) {
                 points.remove(point);
@@ -111,7 +141,6 @@ public class UIController {
                 event.consume();
             }
         });
-        pointCanvas.getChildren().add(circle);
     }
 
     private String formatPoint(Point2D point) {

@@ -16,8 +16,8 @@
     <bottom>
         <ToolBar>
             <HBox spacing="10" alignment="CENTER">
-                <Button fx:id="clearButton" text="Clear Canvas" onAction="#handleClearPoints" />
-                <Button fx:id="randomPointsButton" text="Add Random Points" onAction="#handleAddRandomPoints" />
+                <Button fx:id="clearButton" text="Clear Canvas"/>
+                <Button fx:id="randomPointsButton" text="Add Random Points"/>
                 <Button fx:id="computeButton" text="Compute Convex Hull" />
             </HBox>
         </ToolBar>

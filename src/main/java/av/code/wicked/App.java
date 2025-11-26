@@ -7,7 +7,7 @@ public class App extends Application {
 
     @Override
     public void start(Stage primaryStage) {
-        new UIController(primaryStage).init();
+        new UIController(primaryStage).launchUI();
     }
 
     public static void main(String[] args) {
