@@ -85,7 +85,7 @@ public class UIController {
     }
 
     private Scene buildScene(Parent root) {
-        return new Scene(root, 800, 600);
+        return new Scene(root, 1280, 720);
     }
 
     private void showStage(Scene scene) {
