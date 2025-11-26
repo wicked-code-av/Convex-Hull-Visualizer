@@ -3,8 +3,10 @@ package av.code.wicked;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import av.code.wicked.hull.HullAnimationController;
 import av.code.wicked.hull.HullStep;
@@ -31,6 +33,11 @@ public class UIController {
     private static final int RANDOM_POINT_COUNT = 25;
     private static final double POINT_RADIUS = 4.0;
     private static final Duration ANIMATION_INTERVAL = Duration.millis(600);
+    private static final Color COLOR_POINT = Color.DODGERBLUE;
+    private static final Color COLOR_UPPER = Color.MEDIUMPURPLE;
+    private static final Color COLOR_LOWER = Color.MEDIUMSEAGREEN;
+    private static final Color COLOR_SHARED = Color.DARKGOLDENROD;
+    private static final Color COLOR_HIGHLIGHT = Color.ORANGE;
 
     private final Stage stage;
     private final ObservableList<Point2D> points = FXCollections.observableArrayList();
@@ -41,6 +48,7 @@ public class UIController {
     private HullAnimationController animationController;
     private Polyline hullOutline;
     private Circle highlightedPoint;
+    private Color highlightedPointBaseColor;
 
     @FXML private Pane pointCanvas;
     @FXML private Button clearButton;
@@ -187,7 +195,7 @@ public class UIController {
         }
         animationController.stepForward();
         playPauseButton.setText("Play");
-        updateStatus("Advanced one step.");
+        // status is updated inside applyHullStep for the executed step
     }
 
     private void resetAnimation() {
@@ -197,13 +205,50 @@ public class UIController {
         animationController.reset();
         playPauseButton.setText("Play");
         stepButton.setDisable(false);
+        resetHullVisualization();
+        resetPointColors();
         updateStatus("Animation reset.");
     }
 
+    private void resetHullVisualization() {
+        if (hullOutline != null) {
+            hullOutline.getPoints().clear();
+        }
+        highlightFocusPoint(null);
+    }
+
+    private void resetPointColors() {
+        pointNodes.values().forEach(circle -> circle.setFill(COLOR_POINT));
+        highlightedPoint = null;
+        highlightedPointBaseColor = null;
+    }
+
     private void applyHullStep(HullStep step) {
+        applyMembershipColors(step);
         renderHull(step);
         highlightFocusPoint(step.focusPoint());
         updateStatus("Step " + step.stepNumber() + ": " + step.description());
+    }
+
+    private void applyMembershipColors(HullStep step) {
+        if (pointNodes.isEmpty()) {
+            return;
+        }
+        Set<Point2D> upperSet = new HashSet<>(step.upperHull());
+        Set<Point2D> lowerSet = new HashSet<>(step.lowerHull());
+        pointNodes.forEach((point, circle) -> {
+            Color color = COLOR_POINT;
+            if (upperSet.contains(point) && lowerSet.contains(point)) {
+                color = COLOR_SHARED;
+            } else if (upperSet.contains(point)) {
+                color = COLOR_UPPER;
+            } else if (lowerSet.contains(point)) {
+                color = COLOR_LOWER;
+            }
+            circle.setFill(color);
+        });
+        highlightedPoint = null;
+        highlightedPointBaseColor = null;
     }
 
     private void renderHull(HullStep step) {
@@ -234,8 +279,9 @@ public class UIController {
 
     private void highlightFocusPoint(Point2D point) {
         if (highlightedPoint != null) {
-            highlightedPoint.setFill(Color.DODGERBLUE);
+            highlightedPoint.setFill(highlightedPointBaseColor != null ? highlightedPointBaseColor : COLOR_POINT);
             highlightedPoint = null;
+            highlightedPointBaseColor = null;
         }
         if (point == null) {
             return;
@@ -243,7 +289,8 @@ public class UIController {
         Circle circle = pointNodes.get(point);
         if (circle != null) {
             highlightedPoint = circle;
-            circle.setFill(Color.ORANGE);
+            highlightedPointBaseColor = (Color) circle.getFill();
+            circle.setFill(COLOR_HIGHLIGHT);
         }
     }
 
@@ -308,12 +355,6 @@ public class UIController {
         });
     }
 
-    private void resetHullVisualization() {
-        if (hullOutline != null) {
-            hullOutline.getPoints().clear();
-        }
-        highlightFocusPoint(null);
-    }
 
     private void invalidateHullAnimation(String reason) {
         if (animationController != null) {
