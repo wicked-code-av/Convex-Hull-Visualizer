@@ -4,6 +4,10 @@ import java.util.List;
 
 import javafx.geometry.Point2D;
 
+/**
+ * Snapshot emitted by {@link MonotoneChainHull} describing the current upper/lower hull
+ * and metadata for {@link HullAnimationController} to replay on the JavaFX canvas.
+ */
 public record HullStep(
         int stepNumber,
         HullAction action,

@@ -6,6 +6,11 @@ import java.util.List;
 
 import javafx.geometry.Point2D;
 
+/**
+ * Produces the ordered list of {@link HullStep}s for Andrew's monotone-chain algorithm.
+ * Steps capture upper/lower hull mutations so {@link av.code.wicked.hull.HullAnimationController}
+ * and the UI can replay the geometry changes visually without re-running the math.
+ */
 public class MonotoneChainHull {
 
     public List<HullStep> compute(List<Point2D> inputPoints) {

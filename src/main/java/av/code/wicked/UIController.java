@@ -28,6 +28,11 @@ import javafx.scene.shape.Polyline;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
+/**
+ * Primary JavaFX controller: bootstraps the stage, captures user input, invokes
+ * {@link MonotoneChainHull} to produce {@link HullStep}s, and delegates playback to
+ * {@link HullAnimationController} so the canvas can visualize the convex hull evolution.
+ */
 public class UIController {
     private static final int RANDOM_POINT_COUNT = 25;
     private static final double POINT_RADIUS = 4.0;
@@ -56,6 +61,8 @@ public class UIController {
     @FXML private Button stepButton;
     @FXML private Button resetButton;
     @FXML private Label statusLabel;
+
+    // Stage bootstrap ------------------------------------------------------
 
     public UIController(Stage stage) {
         this.stage = stage;
@@ -87,17 +94,19 @@ public class UIController {
         stage.show();
     }
 
+    // FXML lifecycle -------------------------------------------------------
+
     @FXML
     private void initialize() {
-        configureCanvasInteraction();
-        configureButtons();
-        initializeHullLayer();
+        wireCanvasClicks();
+        wireControlButtons();
+        initializeHullLayers();
         initializeAnimationController();
         disableTransportControls();
         updateStatus("Ready.");
     }
 
-    private void configureCanvasInteraction() {
+    private void wireCanvasClicks() {
         if (pointCanvas == null) {
             return;
         }
@@ -109,7 +118,7 @@ public class UIController {
         });
     }
 
-    private void configureButtons() {
+    private void wireControlButtons() {
         if (clearButton != null) {
             clearButton.setOnAction(event -> clearAllPoints());
         }
@@ -120,7 +129,7 @@ public class UIController {
             });
         }
         if (computeButton != null) {
-            computeButton.setOnAction(event -> computeConvexHullSteps());
+            computeButton.setOnAction(event -> prepareHullAnimation());
         }
         if (playPauseButton != null) {
             playPauseButton.setOnAction(event -> togglePlayPause());
@@ -133,34 +142,29 @@ public class UIController {
         }
     }
 
-    private void initializeHullLayer() {
+    private void initializeHullLayers() {
         if (pointCanvas == null) {
             return;
         }
-        if (upperHullLine != null) {
-            pointCanvas.getChildren().remove(upperHullLine);
-        }
-        if (lowerHullLine != null) {
-            pointCanvas.getChildren().remove(lowerHullLine);
-        }
-        if (finalHullLine != null) {
-            pointCanvas.getChildren().remove(finalHullLine);
-        }
-        upperHullLine = new Polyline();
-        upperHullLine.setStroke(Color.CRIMSON);
-        upperHullLine.setStrokeWidth(2);
-        pointCanvas.getChildren().add(upperHullLine);
-
-        lowerHullLine = new Polyline();
-        lowerHullLine.setStroke(Color.LIMEGREEN);
-        lowerHullLine.setStrokeWidth(2);
-        pointCanvas.getChildren().add(lowerHullLine);
-
-        finalHullLine = new Polyline();
-        finalHullLine.setStroke(Color.BLUE);
-        finalHullLine.setStrokeWidth(2);
-        pointCanvas.getChildren().add(finalHullLine);
+        removeExistingHullLines();
+        upperHullLine = createHullPolyline(Color.CRIMSON);
+        lowerHullLine = createHullPolyline(Color.LIMEGREEN);
+        finalHullLine = createHullPolyline(Color.BLUE);
     }
+
+    private Polyline createHullPolyline(Color stroke) {
+        Polyline line = new Polyline();
+        line.setStroke(stroke);
+        line.setStrokeWidth(2);
+        pointCanvas.getChildren().add(line);
+        return line;
+    }
+
+    private void removeExistingHullLines() {
+        pointCanvas.getChildren().removeAll(upperHullLine, lowerHullLine, finalHullLine);
+    }
+
+    // Animation orchestration ----------------------------------------------
 
     private void initializeAnimationController() {
         animationController = new HullAnimationController(ANIMATION_INTERVAL);
@@ -173,17 +177,20 @@ public class UIController {
         });
     }
 
-    private void computeConvexHullSteps() {
+    private void prepareHullAnimation() {
         if (points.size() < 3) {
             updateStatus("Need at least 3 points to compute a convex hull.");
             return;
         }
-        List<HullStep> steps = hullSolver.compute(points);
-        animationController.loadSteps(steps);
+        animationController.loadSteps(calculateHullSteps());
         enableTransportControls();
         playPauseButton.setText("Play");
         stepButton.setDisable(false);
         updateStatus("Hull prepared. Press Play or Step.");
+    }
+
+    private List<HullStep> calculateHullSteps() {
+        return hullSolver.compute(points);
     }
 
     private void togglePlayPause() {
@@ -209,7 +216,6 @@ public class UIController {
         }
         animationController.stepForward();
         playPauseButton.setText("Play");
-        // status is updated inside applyHullStep for the executed step
     }
 
     private void resetAnimation() {
@@ -222,6 +228,67 @@ public class UIController {
         resetHullVisualization();
         resetPointColors();
         updateStatus("Animation reset.");
+    }
+
+    private void applyHullStep(HullStep step) {
+        renderHull(step);
+        highlightFocusPoint(step.focusPoint());
+        updateStatus("Step " + step.stepNumber() + ": " + step.description());
+    }
+
+    // Visualization --------------------------------------------------------
+
+    private void renderHull(HullStep step) {
+        if (upperHullLine == null || lowerHullLine == null || finalHullLine == null) {
+            return;
+        }
+
+        populatePolyline(upperHullLine, step.upperHull());
+        populatePolyline(lowerHullLine, step.lowerHull());
+
+        finalHullLine.getPoints().clear();
+        if (step.action() == HullAction.FINALIZED) {
+            List<Point2D> finalPath = new ArrayList<>(step.upperHull());
+            if (!step.lowerHull().isEmpty()) {
+                finalPath.addAll(step.lowerHull());
+            }
+            if (!finalPath.isEmpty()) {
+                populatePolyline(finalHullLine, finalPath);
+                if (finalPath.size() > 1) {
+                    Point2D first = finalPath.get(0);
+                    finalHullLine.getPoints().addAll(first.getX(), first.getY());
+                }
+            }
+        }
+
+        pointCanvas.getChildren().removeAll(upperHullLine, lowerHullLine, finalHullLine);
+        pointCanvas.getChildren().addAll(upperHullLine, lowerHullLine, finalHullLine);
+    }
+
+    private void populatePolyline(Polyline polyline, List<Point2D> path) {
+        List<Double> coordinates = polyline.getPoints();
+        coordinates.clear();
+        path.forEach(point -> {
+            coordinates.add(point.getX());
+            coordinates.add(point.getY());
+        });
+    }
+
+    private void highlightFocusPoint(Point2D point) {
+        if (highlightedPoint != null) {
+            highlightedPoint.setFill(highlightedPointBaseColor != null ? highlightedPointBaseColor : COLOR_POINT);
+            highlightedPoint = null;
+            highlightedPointBaseColor = null;
+        }
+        if (point == null) {
+            return;
+        }
+        Circle circle = pointNodes.get(point);
+        if (circle != null) {
+            highlightedPoint = circle;
+            highlightedPointBaseColor = (Color) circle.getFill();
+            circle.setFill(COLOR_HIGHLIGHT);
+        }
     }
 
     private void resetHullVisualization() {
@@ -243,99 +310,7 @@ public class UIController {
         highlightedPointBaseColor = null;
     }
 
-    private void applyHullStep(HullStep step) {
-        renderHull(step);
-        highlightFocusPoint(step.focusPoint());
-        updateStatus("Step " + step.stepNumber() + ": " + step.description());
-    }
-
-    private void renderHull(HullStep step) {
-        if (upperHullLine == null || lowerHullLine == null || finalHullLine == null) {
-            return;
-        }
-        List<Double> upperCoordinates = upperHullLine.getPoints();
-        upperCoordinates.clear();
-        List<Double> lowerCoordinates = lowerHullLine.getPoints();
-        lowerCoordinates.clear();
-        List<Double> finalCoordinates = finalHullLine.getPoints();
-        finalCoordinates.clear();
-
-        List<Point2D> upperPath = new ArrayList<>(step.upperHull());
-        List<Point2D> lowerPath = new ArrayList<>(step.lowerHull());
-
-        if (!upperPath.isEmpty()) {
-            upperPath.forEach(point -> {
-                upperCoordinates.add(point.getX());
-                upperCoordinates.add(point.getY());
-            });
-        }
-
-        if (!lowerPath.isEmpty()) {
-            lowerPath.forEach(point -> {
-                lowerCoordinates.add(point.getX());
-                lowerCoordinates.add(point.getY());
-            });
-        }
-
-        if (step.action() == HullAction.FINALIZED) {
-            List<Point2D> finalPath = new ArrayList<>(step.upperHull());
-            if (!step.lowerHull().isEmpty()) {
-                finalPath.addAll(step.lowerHull());
-            }
-            if (!finalPath.isEmpty()) {
-                finalPath.forEach(point -> {
-                    finalCoordinates.add(point.getX());
-                    finalCoordinates.add(point.getY());
-                });
-                if (finalPath.size() > 1) {
-                    Point2D first = finalPath.get(0);
-                    finalCoordinates.add(first.getX());
-                    finalCoordinates.add(first.getY());
-                }
-            }
-        }
-
-        pointCanvas.getChildren().remove(upperHullLine);
-        pointCanvas.getChildren().remove(lowerHullLine);
-        pointCanvas.getChildren().remove(finalHullLine);
-        pointCanvas.getChildren().add(upperHullLine);
-        pointCanvas.getChildren().add(lowerHullLine);
-        pointCanvas.getChildren().add(finalHullLine);
-    }
-
-    private void highlightFocusPoint(Point2D point) {
-        if (highlightedPoint != null) {
-            highlightedPoint.setFill(highlightedPointBaseColor != null ? highlightedPointBaseColor : COLOR_POINT);
-            highlightedPoint = null;
-            highlightedPointBaseColor = null;
-        }
-        if (point == null) {
-            return;
-        }
-        Circle circle = pointNodes.get(point);
-        if (circle != null) {
-            highlightedPoint = circle;
-            highlightedPointBaseColor = (Color) circle.getFill();
-            circle.setFill(COLOR_HIGHLIGHT);
-        }
-    }
-
-    private void clearAllPoints() {
-        points.clear();
-        pointNodes.clear();
-        if (pointCanvas != null) {
-            pointCanvas.getChildren().clear();
-            initializeHullLayer();
-        }
-        invalidateHullAnimation("Canvas cleared.");
-    }
-
-    private void populateWithRandomPoints() {
-        double width = resolveCanvasDimension(pointCanvas.getWidth(), pointCanvas.getScene() != null ? pointCanvas.getScene().getWidth() : 0);
-        double height = resolveCanvasDimension(pointCanvas.getHeight(), pointCanvas.getScene() != null ? pointCanvas.getScene().getHeight() : 0);
-        List<Point2D> generated = pointGenerator.generatePoints(RANDOM_POINT_COUNT, width, height, POINT_RADIUS);
-        addPoints(generated);
-    }
+    // Point management -----------------------------------------------------
 
     private void addPoint(double x, double y) {
         Point2D point = new Point2D(x, y);
@@ -352,8 +327,25 @@ public class UIController {
         });
     }
 
+    private void populateWithRandomPoints() {
+        double width = resolveCanvasDimension(pointCanvas.getWidth(), pointCanvas.getScene() != null ? pointCanvas.getScene().getWidth() : 0);
+        double height = resolveCanvasDimension(pointCanvas.getHeight(), pointCanvas.getScene() != null ? pointCanvas.getScene().getHeight() : 0);
+        List<Point2D> generated = pointGenerator.generatePoints(RANDOM_POINT_COUNT, width, height, POINT_RADIUS);
+        addPoints(generated);
+    }
+
+    private void clearAllPoints() {
+        points.clear();
+        pointNodes.clear();
+        if (pointCanvas != null) {
+            pointCanvas.getChildren().clear();
+            initializeHullLayers();
+        }
+        invalidateHullAnimation("Canvas cleared.");
+    }
+
     private Circle createPointCircle(Point2D point) {
-        Circle circle = new Circle(point.getX(), point.getY(), POINT_RADIUS, Color.DODGERBLUE);
+        Circle circle = new Circle(point.getX(), point.getY(), POINT_RADIUS, COLOR_POINT);
         circle.setStroke(Color.WHITE);
         circle.setStrokeWidth(1.5);
         attachTooltip(circle, point);
@@ -381,6 +373,7 @@ public class UIController {
         });
     }
 
+    // Utility helpers ------------------------------------------------------
 
     private void invalidateHullAnimation(String reason) {
         if (animationController != null) {

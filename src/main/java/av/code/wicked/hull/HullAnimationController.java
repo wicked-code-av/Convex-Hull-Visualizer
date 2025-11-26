@@ -9,6 +9,11 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.util.Duration;
 
+/**
+ * Drives playback of {@link HullStep} sequences. The controller feeds steps to the
+ * UI via callbacks at a fixed cadence so visualization stays decoupled from the
+ * convex hull computation performed by {@link MonotoneChainHull}.
+ */
 public class HullAnimationController {
 
     private final Timeline timeline;
@@ -80,4 +85,3 @@ public class HullAnimationController {
         stepConsumer.accept(step);
     }
 }
-
