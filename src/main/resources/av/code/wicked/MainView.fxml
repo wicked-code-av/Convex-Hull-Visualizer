@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/23" xmlns:fx="http://javafx.com/fxml/1">
+    <top>
+        <ToolBar>
+            <Label text="Convex Hull" />
+        </ToolBar>
+    </top>
+    <center>
+        <StackPane>
+            <Pane fx:id="pointCanvas" styleClass="point-canvas" />
+        </StackPane>
+    </center>
+    <bottom>
+        <Label text="Click to add points" />
+    </bottom>
+</BorderPane>
