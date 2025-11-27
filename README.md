@@ -1,13 +1,16 @@
 # Convex Hull Visualizer
 
-A JavaFX desktop application that demonstrates Andrew's monotone-chain algorithm step by step. Click to drop points, generate random datasets, then watch the upper and lower hulls form in distinct colors while detailed status updates describe each iteration.
+A JavaFX desktop application that demonstrates ***Andrew's monotone-chain algorithm***.
 
 ## Highlights
 
-- **Point-first workflow** – add/remove points directly on the canvas or let the random generator populate a playground.
-- **Transport-style controls** – prepare, play, pause, single-step, or reset the animation at any time.
-- **Upper vs. lower hull clarity** – separate polylines (crimson/green) emphasize how the chain grows before it finally closes (blue).
-- **Contextual status feed** – every iteration echoes the matching algorithm step (1–14) so the math lines up with the visuals.
+### *Minimalistic and intuitive UI that can...*
+
+- add/remove points directly on the canvas
+- generate random point sets
+- calculate all steps of convex hull construction in one go
+- animate the step-by-step process with play/pause/step/reset controls
+- status label shows the current algorithm step
 
 ## Programming Style & Architecture
 
@@ -24,23 +27,20 @@ This separation means:
 
 ## Getting Started
 
-```powershell
-Clone Project from GitHub.
-Open in IntelliJ IDEA.
-Execute main method.
-IntelliJ handles everything.
-```
+### Recommended: IntelliJ IDEA
 
-> Note: Ensure proper Maven configuration, especially when using another IDE as IntelliJ.
-> Maven is required to resolve JavaFX dependencies.
+- Clone project sources from GitHub.
+- Open in IntelliJ IDEA.
+- IntelliJ will auto-detect the Maven project and download dependencies.
+- Execute main method.
+- IntelliJ handles compilation and running.
+
+> Note: JDK 23 version 23+ recommended.
+> Maven is required to resolve JavaFX dependencies, especially when not using IntelliJ.
 
 ## Usage Tips
 
 1. Click anywhere on the canvas to drop a point; right-click to remove it.
 2. Use **Add Random Points** for a quick dataset, then **Prepare Hull** to build the step list.
 3. Hit **Play** to animate, **Pause** to inspect, **Step** to advance manually, and **Reset** to clear colors & outlines without losing points.
-4. Watch the status label for the active algorithm step (mirrors the numbered pseudocode in the README and source comments).
-
-## License
-
-MIT (see repository).
+4. Watch the status label for the active algorithm step (mirrors the source comments).
