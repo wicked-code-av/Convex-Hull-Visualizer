@@ -1,6 +1,8 @@
 # Convex Hull Visualizer
 
 A JavaFX desktop application that demonstrates ***Andrew's monotone-chain algorithm***.
+![Screenshot der App](docs/Screenshot04.jpg)
+
 
 ## Highlights
 
