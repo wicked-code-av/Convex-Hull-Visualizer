@@ -67,6 +67,8 @@ public class UIController {
     @FXML private Pane verticalAxisStrip;
     @FXML private Pane horizontalAxisPadding;
     @FXML private Pane horizontalAxisStrip;
+    @FXML private Pane topSpacer;
+    @FXML private Pane rightSpacer;
     @FXML private AxisOverlay axisOverlay;
     @FXML private Button clearButton;
     @FXML private Button randomPointsButton;
@@ -130,6 +132,12 @@ public class UIController {
         pointCanvas.heightProperty().addListener(canvasResizeListener);
         if (verticalAxisStrip != null && horizontalAxisPadding != null) {
             horizontalAxisPadding.prefWidthProperty().bind(verticalAxisStrip.widthProperty());
+        }
+        if (topSpacer != null && horizontalAxisPadding != null) {
+            topSpacer.prefHeightProperty().bind(horizontalAxisPadding.heightProperty());
+        }
+        if (rightSpacer != null && verticalAxisStrip != null) {
+            rightSpacer.prefWidthProperty().bind(verticalAxisStrip.widthProperty());
         }
         if (axisOverlay != null && verticalAxisStrip != null && horizontalAxisPadding != null && horizontalAxisStrip != null) {
             if (canvasStack != null) {

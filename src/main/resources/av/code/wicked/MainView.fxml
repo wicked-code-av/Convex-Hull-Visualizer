@@ -20,6 +20,12 @@
             <left>
                 <Pane fx:id="verticalAxisStrip" styleClass="axis-strip" prefWidth="48" />
             </left>
+            <right>
+                <Pane fx:id="rightSpacer" style="-fx-background-color: white;" prefWidth="48" />
+            </right>
+            <top>
+                <Pane fx:id="topSpacer" style="-fx-background-color: white;" prefHeight="36" />
+            </top>
             <bottom>
                 <HBox fx:id="horizontalAxisRow">
                     <Pane fx:id="horizontalAxisPadding" mouseTransparent="true" />
