@@ -62,10 +62,10 @@ public final class AxisOverlay extends Pane {
         Line bottom = new Line(0, height, width, height);
         Line left = new Line(0, 0, 0, height);
         Line right = new Line(width, 0, width, height);
-        top.setStroke(Color.GRAY);
-        bottom.setStroke(Color.GRAY);
-        left.setStroke(Color.GRAY);
-        right.setStroke(Color.GRAY);
+        top.setStroke(Color.BLACK);
+        bottom.setStroke(Color.BLACK);
+        left.setStroke(Color.BLACK);
+        right.setStroke(Color.BLACK);
         graphics.getChildren().addAll(top, bottom, left, right);
     }
 
@@ -78,9 +78,11 @@ public final class AxisOverlay extends Pane {
         for (double value = 0; value <= width + 0.5; value += step) {
             double x = Math.min(value, width);
             Line tick = new Line(x, height, x, height - TICK_LENGTH);
-            tick.setStroke(Color.DARKGRAY);
+            tick.setStroke(Color.BLACK);
             graphics.getChildren().add(tick);
-            addLabel(horizontalStrip, formatValue(value), offset + x, horizontalStrip.getHeight() * 0.25);
+            if (Math.abs(value) > 1e-6) {
+                addLabel(horizontalStrip, formatValue(value), offset + x, horizontalStrip.getHeight() * 0.25);
+            }
         }
     }
 
@@ -92,10 +94,12 @@ public final class AxisOverlay extends Pane {
         for (double offset = 0; offset <= height + 0.5; offset += step) {
             double y = Math.min(height - offset, height);
             Line tick = new Line(0, y, TICK_LENGTH, y);
-            tick.setStroke(Color.DARKGRAY);
+            tick.setStroke(Color.BLACK);
             graphics.getChildren().add(tick);
             double value = mapper.toModelY(y);
-            addLabel(verticalStrip, formatValue(value), verticalStrip.getWidth() * 0.2, y);
+            if (Math.abs(value) > 1e-6) {
+                addLabel(verticalStrip, formatValue(value), verticalStrip.getWidth() * 0.2, y);
+            }
         }
     }
 
@@ -119,7 +123,7 @@ public final class AxisOverlay extends Pane {
     private void addLabel(Pane host, String text, double absoluteX, double absoluteY) {
         Label label = new Label(text);
         label.setPadding(Insets.EMPTY);
-        label.setTextFill(Color.DARKGRAY);
+        label.setTextFill(Color.BLACK);
         host.getChildren().add(label);
         Runnable align = () -> {
             double width = label.prefWidth(-1);
