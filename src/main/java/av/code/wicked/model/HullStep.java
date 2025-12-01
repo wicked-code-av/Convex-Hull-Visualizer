@@ -1,11 +1,11 @@
-package av.code.wicked.hull;
+package av.code.wicked.model;
 
 import java.util.List;
 
 import javafx.geometry.Point2D;
 
 /**
- * Snapshot emitted by {@link MonotoneChainHull} describing the current upper/lower hull
+ * Snapshot emitted by {@link MonotoneChainHull} describing the current upper/lower model
  * and metadata for {@link HullAnimationController} to replay on the JavaFX canvas.
  */
 public record HullStep(

@@ -1,4 +1,4 @@
-package av.code.wicked.hull;
+package av.code.wicked.model;
 
 import java.util.Collections;
 import java.util.Iterator;
@@ -12,7 +12,7 @@ import javafx.util.Duration;
 /**
  * Drives playback of {@link HullStep} sequences. The controller feeds steps to the
  * UI via callbacks at a fixed cadence so visualization stays decoupled from the
- * convex hull computation performed by {@link MonotoneChainHull}.
+ * convex model computation performed by {@link MonotoneChainHull}.
  */
 public class HullAnimationController {
 

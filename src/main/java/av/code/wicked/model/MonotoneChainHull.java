@@ -1,4 +1,4 @@
-package av.code.wicked.hull;
+package av.code.wicked.model;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -8,7 +8,7 @@ import javafx.geometry.Point2D;
 
 /**
  * Produces the ordered list of {@link HullStep}s for Andrew's monotone-chain algorithm.
- * Steps capture upper/lower hull mutations so {@link av.code.wicked.hull.HullAnimationController}
+ * Steps capture upper/lower model mutations so {@link av.code.wicked.model.HullAnimationController}
  * and the UI can replay the geometry changes visually without re-running the math.
  */
 public class MonotoneChainHull {
@@ -22,7 +22,7 @@ public class MonotoneChainHull {
         steps.add(step(1, HullAction.SORTED, points, List.of(), List.of(), "Points sorted by x then y"));
 
         if (points.size() <= 2) {
-            steps.add(step(14, HullAction.FINALIZED, points, List.of(), List.of(), "Trivial hull"));
+            steps.add(step(14, HullAction.FINALIZED, points, List.of(), List.of(), "Trivial model"));
             return steps;
         }
 
@@ -30,18 +30,18 @@ public class MonotoneChainHull {
         List<Point2D> upper = new ArrayList<>();
         upper.add(points.get(0));
         upper.add(points.get(1));
-        steps.add(step(2, HullAction.UPPER_APPEND, points, upper, List.of(), "Initialize upper hull"));
+        steps.add(step(2, HullAction.UPPER_APPEND, points, upper, List.of(), "Initialize upper model"));
 
         // Step 3-6: For i = 3 to n...
         for (int i = 2; i < points.size(); i++) {
             Point2D pi = points.get(i);
             // Step 4: Append pi to L_upper.
             upper.add(pi);
-            steps.add(step(4, HullAction.UPPER_APPEND, points, upper, List.of(), "Append point to upper hull"));
+            steps.add(step(4, HullAction.UPPER_APPEND, points, upper, List.of(), "Append point to upper model"));
             // Step 5-6: While L_upper contains more than two points and the last three points do not make right turn
             while (upper.size() > 2 && !isRightTurn(upper)) {
                 Point2D removed = upper.remove(upper.size() - 2);
-                steps.add(step(6, HullAction.UPPER_REDUCTION, points, upper, List.of(), "Remove middle point from upper hull: " + formatPoint(removed)));
+                steps.add(step(6, HullAction.UPPER_REDUCTION, points, upper, List.of(), "Remove middle point from upper model: " + formatPoint(removed)));
             }
         }
 
@@ -50,18 +50,18 @@ public class MonotoneChainHull {
         int n = points.size();
         lower.add(points.get(n - 1));
         lower.add(points.get(n - 2));
-        steps.add(step(7, HullAction.LOWER_APPEND, points, upper, lower, "Initialize lower hull"));
+        steps.add(step(7, HullAction.LOWER_APPEND, points, upper, lower, "Initialize lower model"));
 
         // Step 8-11: For i = n-2 down to 1...
         for (int i = n - 3; i >= 0; i--) {
             Point2D pi = points.get(i);
             // Step 9: Append pi to L_lower.
             lower.add(pi);
-            steps.add(step(9, HullAction.LOWER_APPEND, points, upper, lower, "Append point to lower hull"));
+            steps.add(step(9, HullAction.LOWER_APPEND, points, upper, lower, "Append point to lower model"));
             // Step 10-11: While not right turn remove middle.
             while (lower.size() > 2 && !isRightTurn(lower)) {
                 Point2D removed = lower.remove(lower.size() - 2);
-                steps.add(step(11, HullAction.LOWER_REDUCTION, points, upper, lower, "Remove middle point from lower hull: " + formatPoint(removed)));
+                steps.add(step(11, HullAction.LOWER_REDUCTION, points, upper, lower, "Remove middle point from lower model: " + formatPoint(removed)));
             }
         }
 
@@ -72,15 +72,15 @@ public class MonotoneChainHull {
         if (!lower.isEmpty()) {
             lower.remove(lower.size() - 1);
         }
-        steps.add(step(12, HullAction.LOWER_REDUCTION, points, upper, lower, "Trim lower hull endpoints"));
+        steps.add(step(12, HullAction.LOWER_REDUCTION, points, upper, lower, "Trim lower model endpoints"));
 
         // Step 13: Append L_lower to L_upper and call the resulting list L.
         List<Point2D> hull = new ArrayList<>(upper);
         hull.addAll(lower);
-        steps.add(step(13, HullAction.FINALIZED, hull, upper, lower, "Combine upper and lower hull"));
+        steps.add(step(13, HullAction.FINALIZED, hull, upper, lower, "Combine upper and lower model"));
 
         // Step 14: Return L.
-        steps.add(step(14, HullAction.FINALIZED, hull, upper, lower, "Convex hull ready"));
+        steps.add(step(14, HullAction.FINALIZED, hull, upper, lower, "Convex model ready"));
         return steps;
     }
 

@@ -1,4 +1,4 @@
-package av.code.wicked;
+package av.code.wicked.util;
 
 import java.security.SecureRandom;
 import java.util.ArrayList;

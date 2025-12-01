@@ -1,5 +1,6 @@
 package av.code.wicked;
 
+import av.code.wicked.view.UIController;
 import javafx.application.Application;
 import javafx.stage.Stage;
 

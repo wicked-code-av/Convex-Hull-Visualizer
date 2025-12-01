@@ -1,4 +1,4 @@
-package av.code.wicked.hull;
+package av.code.wicked.model;
 
 public enum HullAction {
     SORTED,

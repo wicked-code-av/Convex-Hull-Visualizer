@@ -1,4 +1,4 @@
-package av.code.wicked;
+package av.code.wicked.view;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -6,12 +6,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import av.code.wicked.hull.HullAction;
-import av.code.wicked.hull.HullAnimationController;
-import av.code.wicked.hull.HullStep;
-import av.code.wicked.hull.MonotoneChainHull;
-import av.code.wicked.view.AxisOverlay;
-import av.code.wicked.view.CoordinateMapper;
+import av.code.wicked.App;
+import av.code.wicked.util.RandomPointGenerator;
+import av.code.wicked.model.HullAction;
+import av.code.wicked.model.HullAnimationController;
+import av.code.wicked.model.HullStep;
+import av.code.wicked.model.MonotoneChainHull;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -36,7 +36,7 @@ import javafx.util.Duration;
 /**
  * Primary JavaFX controller: bootstraps the stage, captures user input, invokes
  * {@link MonotoneChainHull} to produce {@link HullStep}s, and delegates playback to
- * {@link HullAnimationController} so the canvas can visualize the convex hull evolution.
+ * {@link HullAnimationController} so the canvas can visualize the convex model evolution.
  */
 public class UIController {
     private static final int RANDOM_POINT_COUNT = 25;
@@ -159,7 +159,7 @@ public class UIController {
         pointCanvas.setOnMouseClicked(event -> {
             if (event.getButton() == MouseButton.PRIMARY) {
                 addPoint(event.getX(), event.getY());
-                invalidateHullAnimation("Point added. Prepare hull again.");
+                invalidateHullAnimation("Point added. Prepare model again.");
             } else if (event.getButton() == MouseButton.SECONDARY) {
                 removePointAt(event.getX(), event.getY());
             }
@@ -173,7 +173,7 @@ public class UIController {
         if (randomPointsButton != null) {
             randomPointsButton.setOnAction(event -> {
                 populateWithRandomPoints();
-                invalidateHullAnimation("Random points added. Prepare hull again.");
+                invalidateHullAnimation("Random points added. Prepare model again.");
             });
         }
         if (computeButton != null) {
@@ -227,7 +227,7 @@ public class UIController {
 
     private void prepareHullAnimation() {
         if (points.size() < 3) {
-            updateStatus("Need at least 3 points to compute a convex hull.");
+            updateStatus("Need at least 3 points to compute a convex model.");
             return;
         }
         animationController.loadSteps(calculateHullSteps());
@@ -419,7 +419,7 @@ public class UIController {
                 points.remove(point);
                 pointNodes.remove(point);
                 pointCanvas.getChildren().remove(circle);
-                invalidateHullAnimation("Point removed. Prepare hull again.");
+                invalidateHullAnimation("Point removed. Prepare model again.");
                 event.consume();
             }
         });
@@ -486,7 +486,7 @@ public class UIController {
         Circle circle = pointNodes.remove(modelPoint);
         if (circle != null) {
             pointCanvas.getChildren().remove(circle);
-            invalidateHullAnimation("Point removed. Prepare hull again.");
+            invalidateHullAnimation("Point removed. Prepare model again.");
         } else {
             // If no exact point is found, attempt to find and remove the nearest point within a certain radius
             double radius = POINT_RADIUS * 2; // Search within twice the point radius
@@ -502,7 +502,7 @@ public class UIController {
                 Circle nearestCircle = pointNodes.remove(nearestPoint);
                 if (nearestCircle != null) {
                     pointCanvas.getChildren().remove(nearestCircle);
-                    invalidateHullAnimation("Point removed. Prepare hull again.");
+                    invalidateHullAnimation("Point removed. Prepare model again.");
                 }
             }
         }
