@@ -24,6 +24,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tooltip;
 import javafx.scene.input.MouseButton;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
@@ -60,8 +61,12 @@ public class UIController {
     private Color highlightedPointBaseColor;
     private HullStep lastRenderedStep;
 
+    @FXML private BorderPane canvasViewport;
     @FXML private Pane pointCanvas;
     @FXML private StackPane canvasStack;
+    @FXML private Pane verticalAxisStrip;
+    @FXML private Pane horizontalAxisPadding;
+    @FXML private Pane horizontalAxisStrip;
     @FXML private AxisOverlay axisOverlay;
     @FXML private Button clearButton;
     @FXML private Button randomPointsButton;
@@ -123,7 +128,10 @@ public class UIController {
         coordinateMapper.bindTo(pointCanvas.widthProperty(), pointCanvas.heightProperty());
         pointCanvas.widthProperty().addListener(canvasResizeListener);
         pointCanvas.heightProperty().addListener(canvasResizeListener);
-        if (axisOverlay != null) {
+        if (verticalAxisStrip != null && horizontalAxisPadding != null) {
+            horizontalAxisPadding.prefWidthProperty().bind(verticalAxisStrip.widthProperty());
+        }
+        if (axisOverlay != null && verticalAxisStrip != null && horizontalAxisPadding != null && horizontalAxisStrip != null) {
             if (canvasStack != null) {
                 axisOverlay.prefWidthProperty().bind(canvasStack.widthProperty());
                 axisOverlay.prefHeightProperty().bind(canvasStack.heightProperty());
@@ -131,7 +139,7 @@ public class UIController {
                 axisOverlay.prefWidthProperty().bind(pointCanvas.widthProperty());
                 axisOverlay.prefHeightProperty().bind(pointCanvas.heightProperty());
             }
-            axisOverlay.setCoordinateMapper(coordinateMapper);
+            axisOverlay.configure(coordinateMapper, verticalAxisStrip, horizontalAxisStrip);
         }
         refreshViewProjection();
     }

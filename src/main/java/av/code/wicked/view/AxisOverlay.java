@@ -2,7 +2,6 @@ package av.code.wicked.view;
 
 import java.util.Objects;
 
-import javafx.beans.value.ChangeListener;
 import javafx.geometry.Insets;
 import javafx.scene.Group;
 import javafx.scene.control.Label;
@@ -11,41 +10,43 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
 
 /**
- * Lightweight ruler-style overlay that renders border axes, ticks, and labels
- * around the drawing canvas.
+ * Renders ruler ticks and labels around the drawing canvas using a Cartesian coordinate frame.
  */
 public final class AxisOverlay extends Pane {
 
     private static final double TICK_LENGTH = 8;
-    private static final double LABEL_OFFSET = 4;
     private static final double MIN_PIXEL_STEP = 70;
 
     private final Group graphics = new Group();
-    private final ChangeListener<Number> sizeListener = (obs, oldVal, newVal) -> redraw();
-
     private CoordinateMapper mapper;
+    private Pane verticalStrip;
+    private Pane horizontalStrip;
 
     public AxisOverlay() {
         setPickOnBounds(false);
         setMouseTransparent(true);
         getChildren().add(graphics);
-        widthProperty().addListener(sizeListener);
-        heightProperty().addListener(sizeListener);
+        widthProperty().addListener((obs, oldVal, newVal) -> redraw());
+        heightProperty().addListener((obs, oldVal, newVal) -> redraw());
     }
 
-    public void setCoordinateMapper(CoordinateMapper mapper) {
-        if (this.mapper != null) {
-            this.mapper.widthProperty().removeListener(sizeListener);
-            this.mapper.heightProperty().removeListener(sizeListener);
-        }
+    public void configure(CoordinateMapper mapper, Pane verticalStrip, Pane horizontalStrip) {
         this.mapper = Objects.requireNonNull(mapper, "mapper");
-        this.mapper.widthProperty().addListener(sizeListener);
-        this.mapper.heightProperty().addListener(sizeListener);
+        this.verticalStrip = Objects.requireNonNull(verticalStrip, "verticalStrip");
+        this.horizontalStrip = Objects.requireNonNull(horizontalStrip, "horizontalStrip");
+        this.mapper.widthProperty().addListener((obs, oldVal, newVal) -> redraw());
+        this.mapper.heightProperty().addListener((obs, oldVal, newVal) -> redraw());
         redraw();
     }
 
     private void redraw() {
         graphics.getChildren().clear();
+        if (verticalStrip != null) {
+            verticalStrip.getChildren().clear();
+        }
+        if (horizontalStrip != null) {
+            horizontalStrip.getChildren().clear();
+        }
         double width = getWidth();
         double height = getHeight();
         if (width <= 0 || height <= 0 || mapper == null) {
@@ -69,29 +70,32 @@ public final class AxisOverlay extends Pane {
     }
 
     private void drawHorizontalRuler(double width, double height) {
+        if (horizontalStrip == null) {
+            return;
+        }
         double step = computeStep(width);
+        double offset = verticalStrip != null ? verticalStrip.getWidth() : 0;
         for (double value = 0; value <= width + 0.5; value += step) {
             double x = Math.min(value, width);
-            Line bottomTick = new Line(x, height, x, height - TICK_LENGTH);
-            Line topTick = new Line(x, 0, x, TICK_LENGTH);
-            bottomTick.setStroke(Color.DARKGRAY);
-            topTick.setStroke(Color.DARKGRAY);
-            graphics.getChildren().addAll(bottomTick, topTick);
-            addLabel(formatValue(x), x - 12, height - TICK_LENGTH - LABEL_OFFSET, true);
+            Line tick = new Line(x, height, x, height - TICK_LENGTH);
+            tick.setStroke(Color.DARKGRAY);
+            graphics.getChildren().add(tick);
+            addLabel(horizontalStrip, formatValue(value), offset + x, horizontalStrip.getHeight() * 0.25);
         }
     }
 
     private void drawVerticalRuler(double width, double height) {
+        if (verticalStrip == null) {
+            return;
+        }
         double step = computeStep(height);
         for (double offset = 0; offset <= height + 0.5; offset += step) {
             double y = Math.min(height - offset, height);
-            Line leftTick = new Line(0, y, TICK_LENGTH, y);
-            Line rightTick = new Line(width - TICK_LENGTH, y, width, y);
-            leftTick.setStroke(Color.DARKGRAY);
-            rightTick.setStroke(Color.DARKGRAY);
-            graphics.getChildren().addAll(leftTick, rightTick);
+            Line tick = new Line(0, y, TICK_LENGTH, y);
+            tick.setStroke(Color.DARKGRAY);
+            graphics.getChildren().add(tick);
             double value = mapper.toModelY(y);
-            addLabel(formatValue(value), LABEL_OFFSET, y - 10, false);
+            addLabel(verticalStrip, formatValue(value), verticalStrip.getWidth() * 0.2, y);
         }
     }
 
@@ -112,13 +116,23 @@ public final class AxisOverlay extends Pane {
         return nice * magnitude;
     }
 
-    private void addLabel(String text, double x, double y, boolean bottomAxis) {
+    private void addLabel(Pane host, String text, double absoluteX, double absoluteY) {
         Label label = new Label(text);
         label.setPadding(Insets.EMPTY);
         label.setTextFill(Color.DARKGRAY);
-        label.setLayoutX(x);
-        label.setLayoutY(bottomAxis ? Math.min(getHeight() - 18, y) : Math.max(2, y));
-        graphics.getChildren().add(label);
+        host.getChildren().add(label);
+        Runnable align = () -> {
+            double width = label.prefWidth(-1);
+            double height = label.prefHeight(-1);
+            double x = Math.max(2, Math.min(host.getWidth() - width - 2, absoluteX - width / 2 - (host == horizontalStrip && verticalStrip != null ? verticalStrip.getWidth() : 0)));
+            double y = Math.max(2, Math.min(host.getHeight() - height - 2, absoluteY - height / 2));
+            label.setLayoutX(x);
+            label.setLayoutY(y);
+        };
+        label.layoutBoundsProperty().addListener((obs, oldBounds, newBounds) -> align.run());
+        host.widthProperty().addListener((obs, oldVal, newVal) -> align.run());
+        host.heightProperty().addListener((obs, oldVal, newVal) -> align.run());
+        align.run();
     }
 
     private String formatValue(double value) {
@@ -129,4 +143,3 @@ public final class AxisOverlay extends Pane {
         return String.format("%.1f", rounded);
     }
 }
-

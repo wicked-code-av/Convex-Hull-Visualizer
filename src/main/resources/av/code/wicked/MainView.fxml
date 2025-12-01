@@ -10,10 +10,23 @@
         </ToolBar>
     </top>
     <center>
-        <StackPane fx:id="canvasStack">
-            <Pane fx:id="pointCanvas" styleClass="point-canvas" />
-            <AxisOverlay fx:id="axisOverlay" />
-        </StackPane>
+        <BorderPane fx:id="canvasViewport">
+            <center>
+                <StackPane fx:id="canvasStack">
+                    <Pane fx:id="pointCanvas" styleClass="point-canvas" />
+                    <AxisOverlay fx:id="axisOverlay" />
+                </StackPane>
+            </center>
+            <left>
+                <Pane fx:id="verticalAxisStrip" styleClass="axis-strip" prefWidth="48" />
+            </left>
+            <bottom>
+                <HBox fx:id="horizontalAxisRow">
+                    <Pane fx:id="horizontalAxisPadding" mouseTransparent="true" />
+                    <Pane fx:id="horizontalAxisStrip" styleClass="axis-strip" HBox.hgrow="ALWAYS" prefHeight="36" />
+                </HBox>
+            </bottom>
+        </BorderPane>
     </center>
     <bottom>
         <ToolBar>
