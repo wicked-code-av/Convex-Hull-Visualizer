@@ -10,6 +10,9 @@ import av.code.wicked.hull.HullAction;
 import av.code.wicked.hull.HullAnimationController;
 import av.code.wicked.hull.HullStep;
 import av.code.wicked.hull.MonotoneChainHull;
+import av.code.wicked.view.AxisOverlay;
+import av.code.wicked.view.CoordinateMapper;
+import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -22,6 +25,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.Tooltip;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Polyline;
@@ -45,6 +49,8 @@ public class UIController {
     private final RandomPointGenerator pointGenerator = new RandomPointGenerator();
     private final Map<Point2D, Circle> pointNodes = new HashMap<>();
     private final MonotoneChainHull hullSolver = new MonotoneChainHull();
+    private final CoordinateMapper coordinateMapper = new CoordinateMapper();
+    private final ChangeListener<Number> canvasResizeListener = (obs, oldVal, newVal) -> refreshViewProjection();
 
     private HullAnimationController animationController;
     private Polyline upperHullLine;
@@ -52,8 +58,11 @@ public class UIController {
     private Polyline finalHullLine;
     private Circle highlightedPoint;
     private Color highlightedPointBaseColor;
+    private HullStep lastRenderedStep;
 
     @FXML private Pane pointCanvas;
+    @FXML private StackPane canvasStack;
+    @FXML private AxisOverlay axisOverlay;
     @FXML private Button clearButton;
     @FXML private Button randomPointsButton;
     @FXML private Button computeButton;
@@ -98,12 +107,33 @@ public class UIController {
 
     @FXML
     private void initialize() {
+        configureCanvasInfrastructure();
         wireCanvasClicks();
         wireControlButtons();
         initializeHullLayers();
         initializeAnimationController();
         disableTransportControls();
         updateStatus("Ready.");
+    }
+
+    private void configureCanvasInfrastructure() {
+        if (pointCanvas == null) {
+            return;
+        }
+        coordinateMapper.bindTo(pointCanvas.widthProperty(), pointCanvas.heightProperty());
+        pointCanvas.widthProperty().addListener(canvasResizeListener);
+        pointCanvas.heightProperty().addListener(canvasResizeListener);
+        if (axisOverlay != null) {
+            if (canvasStack != null) {
+                axisOverlay.prefWidthProperty().bind(canvasStack.widthProperty());
+                axisOverlay.prefHeightProperty().bind(canvasStack.heightProperty());
+            } else {
+                axisOverlay.prefWidthProperty().bind(pointCanvas.widthProperty());
+                axisOverlay.prefHeightProperty().bind(pointCanvas.heightProperty());
+            }
+            axisOverlay.setCoordinateMapper(coordinateMapper);
+        }
+        refreshViewProjection();
     }
 
     private void wireCanvasClicks() {
@@ -114,6 +144,8 @@ public class UIController {
             if (event.getButton() == MouseButton.PRIMARY) {
                 addPoint(event.getX(), event.getY());
                 invalidateHullAnimation("Point added. Prepare hull again.");
+            } else if (event.getButton() == MouseButton.SECONDARY) {
+                removePointAt(event.getX(), event.getY());
             }
         });
     }
@@ -231,15 +263,14 @@ public class UIController {
     }
 
     private void applyHullStep(HullStep step) {
+        lastRenderedStep = step;
         renderHull(step);
         highlightFocusPoint(step.focusPoint());
         updateStatus("Step " + step.stepNumber() + ": " + step.description());
     }
 
-    // Visualization --------------------------------------------------------
-
     private void renderHull(HullStep step) {
-        if (upperHullLine == null || lowerHullLine == null || finalHullLine == null) {
+        if (upperHullLine == null || lowerHullLine == null || finalHullLine == null || step == null) {
             return;
         }
 
@@ -255,8 +286,8 @@ public class UIController {
             if (!finalPath.isEmpty()) {
                 populatePolyline(finalHullLine, finalPath);
                 if (finalPath.size() > 1) {
-                    Point2D first = finalPath.get(0);
-                    finalHullLine.getPoints().addAll(first.getX(), first.getY());
+                    Point2D firstView = coordinateMapper.toView(finalPath.get(0));
+                    finalHullLine.getPoints().addAll(firstView.getX(), firstView.getY());
                 }
             }
         }
@@ -269,21 +300,22 @@ public class UIController {
         List<Double> coordinates = polyline.getPoints();
         coordinates.clear();
         path.forEach(point -> {
-            coordinates.add(point.getX());
-            coordinates.add(point.getY());
+            Point2D viewPoint = coordinateMapper.toView(point);
+            coordinates.add(viewPoint.getX());
+            coordinates.add(viewPoint.getY());
         });
     }
 
-    private void highlightFocusPoint(Point2D point) {
+    private void highlightFocusPoint(Point2D modelPoint) {
         if (highlightedPoint != null) {
             highlightedPoint.setFill(highlightedPointBaseColor != null ? highlightedPointBaseColor : COLOR_POINT);
             highlightedPoint = null;
             highlightedPointBaseColor = null;
         }
-        if (point == null) {
+        if (modelPoint == null) {
             return;
         }
-        Circle circle = pointNodes.get(point);
+        Circle circle = pointNodes.get(modelPoint);
         if (circle != null) {
             highlightedPoint = circle;
             highlightedPointBaseColor = (Color) circle.getFill();
@@ -301,6 +333,7 @@ public class UIController {
         if (finalHullLine != null) {
             finalHullLine.getPoints().clear();
         }
+        lastRenderedStep = null;
         highlightFocusPoint(null);
     }
 
@@ -312,26 +345,27 @@ public class UIController {
 
     // Point management -----------------------------------------------------
 
-    private void addPoint(double x, double y) {
-        Point2D point = new Point2D(x, y);
-        points.add(point);
-        Circle circle = createPointCircle(point);
-        pointNodes.put(point, circle);
+    private void addPoint(double viewX, double viewY) {
+        addModelPoint(coordinateMapper.toModel(viewX, viewY));
     }
 
-    private void addPoints(List<Point2D> newPoints) {
-        newPoints.forEach(point -> {
-            points.add(point);
-            Circle circle = createPointCircle(point);
-            pointNodes.put(point, circle);
-        });
+    private void addPoints(List<Point2D> modelPoints) {
+        modelPoints.forEach(this::addModelPoint);
+    }
+
+    private void addModelPoint(Point2D modelPoint) {
+        points.add(modelPoint);
+        Circle circle = createPointCircle(modelPoint);
+        pointNodes.put(modelPoint, circle);
     }
 
     private void populateWithRandomPoints() {
         double width = resolveCanvasDimension(pointCanvas.getWidth(), pointCanvas.getScene() != null ? pointCanvas.getScene().getWidth() : 0);
         double height = resolveCanvasDimension(pointCanvas.getHeight(), pointCanvas.getScene() != null ? pointCanvas.getScene().getHeight() : 0);
         List<Point2D> generated = pointGenerator.generatePoints(RANDOM_POINT_COUNT, width, height, POINT_RADIUS);
-        addPoints(generated);
+        List<Point2D> modelPoints = new ArrayList<>(generated.size());
+        generated.forEach(viewPoint -> modelPoints.add(coordinateMapper.toModel(viewPoint)));
+        addPoints(modelPoints);
     }
 
     private void clearAllPoints() {
@@ -341,11 +375,13 @@ public class UIController {
             pointCanvas.getChildren().clear();
             initializeHullLayers();
         }
+        lastRenderedStep = null;
         invalidateHullAnimation("Canvas cleared.");
     }
 
     private Circle createPointCircle(Point2D point) {
-        Circle circle = new Circle(point.getX(), point.getY(), POINT_RADIUS, COLOR_POINT);
+        Point2D viewPoint = coordinateMapper.toView(point);
+        Circle circle = new Circle(viewPoint.getX(), viewPoint.getY(), POINT_RADIUS, COLOR_POINT);
         circle.setStroke(Color.WHITE);
         circle.setStrokeWidth(1.5);
         attachTooltip(circle, point);
@@ -407,7 +443,52 @@ public class UIController {
         }
     }
 
-    private String formatPoint(Point2D point) {
-        return String.format("(%.1f, %.1f)", point.getX(), point.getY());
+    private String formatPoint(Point2D modelPoint) {
+        return String.format("(%.1f, %.1f)", modelPoint.getX(), modelPoint.getY());
+    }
+
+    private void refreshViewProjection() {
+        if (pointCanvas == null || coordinateMapper.getWidth() <= 0 || coordinateMapper.getHeight() <= 0) {
+            return;
+        }
+        points.forEach(point -> {
+            Circle circle = pointNodes.get(point);
+            if (circle != null) {
+                Point2D viewPoint = coordinateMapper.toView(point);
+                circle.setCenterX(viewPoint.getX());
+                circle.setCenterY(viewPoint.getY());
+            }
+        });
+        if (lastRenderedStep != null) {
+            renderHull(lastRenderedStep);
+        }
+    }
+
+    private void removePointAt(double x, double y) {
+        Point2D modelPoint = coordinateMapper.toModel(x, y);
+        points.remove(modelPoint);
+        Circle circle = pointNodes.remove(modelPoint);
+        if (circle != null) {
+            pointCanvas.getChildren().remove(circle);
+            invalidateHullAnimation("Point removed. Prepare hull again.");
+        } else {
+            // If no exact point is found, attempt to find and remove the nearest point within a certain radius
+            double radius = POINT_RADIUS * 2; // Search within twice the point radius
+            List<Point2D> nearbyPoints = new ArrayList<>();
+            for (Point2D point : points) {
+                if (point.distance(modelPoint) <= radius) {
+                    nearbyPoints.add(point);
+                }
+            }
+            if (!nearbyPoints.isEmpty()) {
+                Point2D nearestPoint = nearbyPoints.get(0);
+                points.remove(nearestPoint);
+                Circle nearestCircle = pointNodes.remove(nearestPoint);
+                if (nearestCircle != null) {
+                    pointCanvas.getChildren().remove(nearestCircle);
+                    invalidateHullAnimation("Point removed. Prepare hull again.");
+                }
+            }
+        }
     }
 }

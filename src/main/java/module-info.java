@@ -4,4 +4,5 @@ module ConvexHull {
     requires javafx.graphics;
 
     opens av.code.wicked;
+    opens av.code.wicked.view;
 }
